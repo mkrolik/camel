@@ -169,11 +169,20 @@ public class SalesforceConsumer extends DefaultConsumer {
         in.setHeader("CamelSalesforceRecordIds", changeEventHeader.get("recordIds"));
 
         if (rawPayload) {
-            in.setBody(message);
+            String sObjectString = null;
+            try {
+                final String sObjectString = objectMapper.writeValueAsString(data);     
+                LOG.debug("Received SObject: {}", sObjectString);          
+            } catch (final IOException e) {
+                final String msg = String.format("Error parsing message [%s] from Topic %s: %s", message, topicName, e.getMessage());
+                handleException(msg, new SalesforceException(msg, e));
+            }   
+            in.setBody(sObjectString);           
         } else {
             payload.remove("ChangeEventHeader");
             in.setBody(payload);
         }
+        
     }
 
     void createPlatformEventMessage(final Message message, final org.apache.camel.Message in) {
@@ -197,11 +206,21 @@ public class SalesforceConsumer extends DefaultConsumer {
         final PlatformEvent platformEvent = objectMapper.convertValue(payload, PlatformEvent.class);
         in.setHeader("CamelSalesforceCreatedDate", platformEvent.getCreated());
 
+        
         if (rawPayload) {
-            in.setBody(message);
+            String sObjectString = null;
+            try {
+                sObjectString = objectMapper.writeValueAsString(data);
+                LOG.debug("Received SObject: {}", sObjectString);
+            } catch (final IOException e) {
+                final String msg = String.format("Error parsing message [%s] from Topic %s: %s", message, topicName, e.getMessage());
+                handleException(msg, new SalesforceException(msg, e));
+            }           
+            in.setBody(sObjectString);
         } else {
             in.setBody(platformEvent);
         }
+        
 
     }
 
